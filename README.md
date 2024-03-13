@@ -1,7 +1,7 @@
 # FluxPy
 A work-in-progress python Finite Volume Method (FVM) Large Eddy Simulation(LES) CFD Simulation
 
-**                ________           ____      
+                ________           ____     
                / ____/ /_  ___  __/ __ |__  __
               / /_  / / / / / |/_/ /_/ / / / /
              / __/ / / /_/ />  </ ____/ /_/ / 
