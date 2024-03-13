@@ -1,1 +1,21 @@
+[project]
+
+requires = ["scipy"]
+
+
+[project]
+
+name = "FluxPy"
+version = "0.0.1" 
+authors = [
+  { name="Jake Schaefer", email="schaeferj@carleton.edu"}
+]
+description = "Python Finite Volume Turbulence Simulation"
+readme = "README.md"
+requires-python = ">=3.9"
+
+keywords = ["FVM", "LES", "finite volume", "CFD"]
+
+[project.urls]
+Homepage="https://github.com/Jake-Schaefer-Code/FluxPy"
 
