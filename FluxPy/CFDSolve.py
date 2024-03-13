@@ -1,6 +1,7 @@
 import numpy as np
 from PDE import *
 from mesh import *
+from plotting import *
 
 class LES:
     """
@@ -208,8 +209,6 @@ class LES:
         # expected large shear flux in case of couette flow
         tau_xy = tau_net[0,1]
         # calculate the divergence of the stress tensor 
-        # TODO set boundaries for ghost cells
-        # tau_xy = adjust_velocity_ghost_cells(tau_xy, self.mesh.nghosts, self.mesh.dy, axis=0)
         visc_flux_x = first_order_partial(tau_xx, self.mesh.dx, axis=1) + first_order_partial(tau_xy, self.mesh.dy, axis=0)
         visc_flux_y = first_order_partial(tau_xy, self.mesh.dx, axis=1) + first_order_partial(tau_yy, self.mesh.dy, axis=0)
         return (visc_flux_x, visc_flux_y)
