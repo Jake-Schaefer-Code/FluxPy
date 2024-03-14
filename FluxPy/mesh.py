@@ -29,10 +29,11 @@ class Field(FieldInterface):
         Parameters
         --------------------------------
         `mesh` : Mesh(MeshInterface)
-
+            Mesh object
         `prim` : str
-
+            Primitive key / field type
         `BCS` : dict{str : BoundaryCondtition} 
+            Boundary condition dictionary
         """
         self.mesh = mesh
         self.prim = prim
@@ -60,12 +61,13 @@ class Field(FieldInterface):
 
     def _resolve_overlap(self, BC1:BoundaryCondition, BC2:BoundaryCondition):
         """
-        Parametes
+        Crops boundary conditions based on priority if they overlap
+
+        Parameters
         --------------------------------
         `BC1` : BoundaryCondition
 
         `BC2` : BoundaryCondition
-
 
         """
         intersection = Slices.get_slice_intersect(BC1.indices, BC2.indices, self.mesh.ncells)
@@ -78,9 +80,6 @@ class Field(FieldInterface):
         # TODO figure this one out
         else:
             BC2.indices = Slices.adjust_indices(BC2.indices, intersection, self.mesh.ncells, (BC2.boundary, BC1.boundary))
-
-    def _check_adjacency(self, edge1, edge2):
-        return
 
     def __getitem__(self, stencil) -> np.ndarray:
         """
@@ -114,8 +113,9 @@ class Field(FieldInterface):
         Parameters
         --------------------------------
         `stencil` : np.ndarray | int | tuple
-
-        `value` : float
+            Mask for where to apply value
+        `value` : float | np.ndarray
+            Value to set item to
 
         Returns
         --------------------------------
@@ -139,7 +139,25 @@ class Field(FieldInterface):
                 self.field[bc] = val
 
 
-    def apply_boundary_faces(self, phi_e, phi_w, phi_n, phi_s):
+    def apply_boundary_faces(self, phi_e:np.ndarray, phi_w:np.ndarray, phi_n:np.ndarray, phi_s:np.ndarray):
+        """
+        Applies boundary conditions to each directional face
+
+        Parameters
+        --------------------------------
+        `phi_e` : np.ndarray
+            East face
+        `phi_w` : np.ndarray
+            West face
+        `phi_n` : np.ndarray
+            North face
+        `phi_s` : np.ndarray
+            South face
+
+        Returns
+        --------------------------------
+        Faces with applied boundary conditions
+        """
         nghosts = self.mesh.nghosts
         dx,dy=self.mesh.dx,self.mesh.dy
         for edge, bc in self.BCS.items():
@@ -160,21 +178,24 @@ class Field(FieldInterface):
 
 class Mesh(MeshInterface):
     """
-    Overarching Mesh Class
+    Mesh Class
     """
     def __init__(self, size:tuple, ncells:tuple, BCS:dict={}, priority_map:dict=_priority_map, nghosts:int=1, constants:dict={}) -> None:
         """
         Parameters
         --------------------------------
         `size` : tuple
-
+            Size of the mesh in form (x,y)
         `ncells` : tuple
-
-        `BCS` : dict = {}
-
+            Number of cells in the x and y directions
+        `BCS` : dict
+            Boundary condition dictionary. Defaults to {}
+        `priority_map` : dict
+            Priorities which to give boundary conditions during applicaiton.
         `nghosts` : int = 1
-
-        `constants` : dict = {}
+            Number of ghost cells to add to each side
+        `constants` : dict
+            Constants dictionary. Defaults to {}
         """
         self.size = size
         self.ncells = ncells
@@ -201,7 +222,11 @@ class Mesh(MeshInterface):
         # Instead of setting attr, rho and mu explicitely
     def _initialize_constants(self, constants:dict) -> None:
         """
-        initializes kwargs constants
+        Initializes constants
+
+        Parameters
+        --------------------------------
+        `constants` : dict
         """
         self.rho = constants.get('rho', 1.0)
         self.mu = constants.get('mu', 1.0)
@@ -212,7 +237,7 @@ class Mesh(MeshInterface):
 
         Parameters
         --------------------------------
-            BCS : dict{str: {str: BoundaryCondition}}
+        `BCS` : dict{str: {str: BoundaryCondition}}
         """
         
         self.BCS = {'u':{}, 'v':{}, 'p':{}}
@@ -233,6 +258,11 @@ class Mesh(MeshInterface):
     def update_boundary(self, prim:str, boundary:dict[str, BoundaryCondition]) -> None:
         """
         Updates the given boundary condition for a primitive
+
+        Parameters
+        --------------------------------
+        `prim` : str
+            The primitive field to update
         """
         self.BCS[prim] = boundary
     
@@ -242,20 +272,24 @@ class Mesh(MeshInterface):
 
     def __getitem__(self, prim:str) -> Field:
         """
-        
+        Parameters
+        --------------------------------
+        `prim` : str
+            Primitive key for field
         """
         if isinstance(prim, str):
             return getattr(self, prim)
     
-    def __setitem__(self, prim, value, stencil=None):
+    def __setitem__(self, prim:str, value:float|np.ndarray, stencil:np.ndarray=None):
         """
         Parameters
         --------------------------------
-        prim : str
-
-        value : 
-
-        stencil : 
+        `prim` : str
+            Primitive key for field
+        `value` : float | np.ndarray
+            The value(s) to apply to the primitive field
+        `stencil` : np.ndarray
+            Mask on which to apply value
         """
         field = getattr(self,prim)
         if stencil is None:
