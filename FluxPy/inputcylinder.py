@@ -36,8 +36,6 @@ nt = 10
 max_iters = int(nt/dt)
 
 
-
-
 def save_to_file(file_index:int, data:dict):
     with h5py.File(f'/home/jacob.schaefer/SogGitlab/FluxPy/FluxPy/data2/data_{file_index}.h5', 'w') as f:
         for dataset_name, dataset_values in data.items():
@@ -120,7 +118,6 @@ def main():
 
     # Initialize the large eddy simualtion class
     solver = LES((Lx, Ly), (numX, numY), BCS, priority_map, nghosts=2, constants=constants)
-    shape = (int(nt/dt), solver.mesh['u'][:,:].shape[0], solver.mesh['u'][:,:].shape[1])
     iter = 0
     t = 0
     path = "/home/jacob.schaefer/SogGitlab/FluxPy/FluxPy"
