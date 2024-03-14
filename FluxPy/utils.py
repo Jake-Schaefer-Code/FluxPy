@@ -72,14 +72,18 @@ class EquilibriumSolver:
         """
         Parameters
         --------------------------------
-        phi : np.ndarray
+        `phi` : np.ndarray
             matrix of dimension (n,m)
-        A : np.ndarray
+        `A` : np.ndarray
             Coefficient matrix A of dimension (nm,nm)
-        b : np.ndarray 
+        `b` : np.ndarray 
             Source term vector of dimesnion (nm) -> i.e. convective flux 
-        tolerance : float
+        `tolerance` : float
             Convergence tolerance
+
+        Returns
+        --------------------------------
+        Solution to `Ax = b`
 
         `x^(k+1) = D^-1 (b - (L+U) x^k)`
         """
@@ -104,21 +108,25 @@ class EquilibriumSolver:
         """
         Parameters
         ----------------
-        phi : np.ndarray
-            matrix of dimension (n,m)
-        A : np.ndarray
+        `phi` : np.ndarray
+            Matrix of dimension (n,m)
+        `A` : np.ndarray
             Coefficient matrix A of dimension (nm,nm)
-        b : np.ndarray 
+        `b` : np.ndarray 
             Source term vector of dimesnion (nm) -> i.e. convective flux 
-        tolerance : float
+        `tolerance` : float
             Convergence tolerance
+
+        Returns
+        ----------------
+        Solution to `Ax = b`
 
         `Ax = b`    
                 kg/(m s^2) -   kg/(m s^2)
         `x_i = 1/(A_ii) * (b_i - Σ_(j≠i) A_ij x_j)`
                             1/s            m^ * kg/m s^2
-            - A_ii = on-diagonal coefficient (coefficient of x_i) 
-            - A_ij = off-dsiagonal coefficient            
+            - `A_ii` = on-diagonal coefficient (coefficient of x_i) 
+            - `A_ij` = off-dsiagonal coefficient            
         """
         shape = b.shape
         b = b.flatten()
@@ -156,16 +164,18 @@ def make_sparse_A(Nx, Ny, dx, dy):
 
     Parameters
     --------------------------------
-    Nx : int
-
-    Ny : int
-    
-    dx : float
-
-    dy : float
+    `Nx` : int
+        Number of cells in x
+    `Ny` : int
+        Number of cells in y
+    `dx` : float
+        Grid spacing in x
+    `dy` : float
+        Grid spacing in y
 
     Returns
     --------------------------------
+    Sparse matrix
     """
     A = lil_matrix((Nx * Ny, Nx * Ny))
     for j in range(Ny):
@@ -192,6 +202,9 @@ def make_sparse_A(Nx, Ny, dx, dy):
     return csr_matrix(A.tocsr())
 
 def inside_cylinder(x, y, radius, center=(0, 0)):
+    """
+    Creates stencil for inside a cylinder
+    """
     return (x - center[0])**2 + (y - center[1])**2 <= radius**2
 
 def adjust_velocity_ghost_cells(u:np.ndarray, nghosts:np.ndarray, dx:float, axis:int=0, flow_profile:str='linear'):
@@ -227,7 +240,7 @@ def adjust_velocity_ghost_cells(u:np.ndarray, nghosts:np.ndarray, dx:float, axis
 
 class Slices:
     @staticmethod
-    def _get_slice_intersect(slice1:slice, slice2:slice, maxval) -> slice:
+    def _get_slice_intersect(slice1:slice, slice2:slice, maxval:int) -> slice:
         """
 
         Parameters
@@ -236,8 +249,11 @@ class Slices:
         
         slice2 : slice
 
+        maxval : int
+
         Returns
         --------------------------------
+        Intersect of slices in 1D
         """
         start1 = 0 if slice1.start is None else slice1.start
         if start1 < 0: start1 = maxval + start1
@@ -254,27 +270,28 @@ class Slices:
         return slice(start, stop)
     
     @staticmethod
-    def get_slice_intersect(slice1:slice | tuple, slice2: slice | tuple, grid) -> slice:
+    def get_slice_intersect(slice1:slice | tuple, slice2: slice | tuple, grid_size:tuple) -> slice:
         """
         Note: assumes that tuple is in order (x,y) for 2D
 
         Parameters
         --------------------------------
-        slice1 : slice | tuple
+        `slice1` : slice | tuple
         
-        slice2 : slice | tuple
+        `slice2` : slice | tuple
         
         Returns
         --------------------------------
+        Intersect of slices in 1D or 2D
         """
         if isinstance(slice1, slice) and isinstance(slice2, slice):
-            return Slices._get_slice_intersect(slice1, slice2, grid)
+            return Slices._get_slice_intersect(slice1, slice2, grid_size)
         elif isinstance(slice1, tuple) and isinstance(slice2, tuple):    
             if len(slice1) != len(slice2):
                 raise IndexError(f"argument of length {len(slice1)} cannot be intersected with argument of length {len(slice2)}")
             slice_y1, slice_x1 = slice1
             slice_y2, slice_x2 = slice2
-            max_y, max_x = grid
+            max_y, max_x = grid_size
             intersect_slice_x =  Slices._get_slice_intersect(slice_x1, slice_x2, max_x)
             intersect_slice_y =  Slices._get_slice_intersect(slice_y1, slice_y2, max_y)
             return (intersect_slice_y, intersect_slice_x)
@@ -282,31 +299,50 @@ class Slices:
             raise TypeError("Both arguments must be slices or tuples of slices")
 
     @staticmethod
-    def adjust_indices(indices:tuple[slice,slice], intersection:tuple[slice,slice], grid, corner):
+    def _convert_slice(s:slice, max_val:int):
+        """
+        Parameters
+        --------------------------------
+        `s` : slice
+
+        `max_val` : int
+
+        Returns
+        --------------------------------
+        New start and stop of converted slice
+        """
+        start = 0 if s.start is None else (s.start if s.start >= 0 else max_val + s.start)
+        stop = max_val if s.stop is None else (s.stop if s.stop >= 0 else max_val + s.stop)
+        return start, stop
+
+    @staticmethod
+    def adjust_indices(indices:tuple[slice,slice], intersection:tuple[slice,slice], grid:tuple, corner:str):
         """"
         Note: assumes that tuple is in order (x,y) for 2D
 
         Parameters
         --------------------------------
+        `indices` : tuple[slice,slice]
+
+        `intersection` : tuple[slice,slice]
+
+        `grid` : tuple
+
+        `corner` : str
 
         Returns
         --------------------------------
+        New indices
         """
         if intersection[0] is None or intersection[1] is None: 
             return indices
         max_y, max_x = grid
         y_indices, x_indices = indices
         y_intersect, x_intersect = intersection
-        def convert_slice(s:slice, max_val):
-            start = 0 if s.start is None else (s.start if s.start >= 0 else max_val + s.start)
-            stop = max_val if s.stop is None else (s.stop if s.stop >= 0 else max_val + s.stop)
-            return start, stop
-        
-        start_y, stop_y = convert_slice(y_indices, max_y)
-        start_x, stop_x = convert_slice(x_indices, max_x)
-
-        start_y_int, stop_y_int = convert_slice(y_intersect, max_y)
-        start_x_int, stop_x_int = convert_slice(x_intersect, max_x)
+        start_y, stop_y = Slices._convert_slice(y_indices, max_y)
+        start_x, stop_x = Slices._convert_slice(x_indices, max_x)
+        start_y_int, stop_y_int = Slices._convert_slice(y_intersect, max_y)
+        start_x_int, stop_x_int = Slices._convert_slice(x_intersect, max_x)
         if corner[0] == 'top' or corner[0] == 'bottom':
             if corner[1] == 'left':
                 start_x += (stop_x_int - start_x_int)
