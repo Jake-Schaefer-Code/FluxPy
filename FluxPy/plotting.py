@@ -4,15 +4,16 @@ import matplotlib.pyplot as plt
 from matplotlib.patches import Circle
 from PDE import curl
 
-
+LOGO = "\n\
+                ________           ____       \n\
+               / ____/ /_  ___  __/ __ |__  __\n\
+              / /_  / / / / / |/_/ /_/ / / / /\n\
+             / __/ / / /_/ />  </ ____/ /_/ / \n\
+            /_/   /_/\__,_/_/|_/_/    \__, /  \n\
+                                     /____/   \n"
 
 def plot_sim(X:np.ndarray, Y:np.ndarray, u:np.ndarray, v:np.ndarray, p:np.ndarray, Lx, Ly, dx, dy, iter, 
              stream:bool=True, quiv:bool=False, grid_lines=False, titles:bool=False, savefig:bool=False):
-    """plt.scatter(particle_positions[:, 0], particle_positions[:, 1], s=1)  # Scatter plot of particle positions
-    plt.title(f'Particle Tracing at Time Step {n}')
-    plt.xlim(0, 1)  # Adjust limits based on flow domain
-    plt.ylim(0, 1)
-    plt.show()"""
     
     v_mag = np.sqrt(u**2 + v**2)
     omega = curl(u,v,dx,dy)
@@ -44,32 +45,6 @@ def plot_sim(X:np.ndarray, Y:np.ndarray, u:np.ndarray, v:np.ndarray, p:np.ndarra
         plt.savefig(f'/home/jacob.schaefer/SogGitlab/vorticityfigs/vorticy_plot{iter}')
 
 
-def plot_pressure(X:np.ndarray, Y:np.ndarray, p:np.ndarray, Lx, Ly, iter):
-    fig1= plt.figure(1, figsize=(2*Lx, 2*Ly))
-    sp1 = fig1.add_subplot(111)
-    sp1.set_aspect('equal')
-    sp1.set_xlim(0, Lx+0.1)
-    sp1.set_ylim(0, Ly+0.1)
-    levels = np.linspace(np.min(p), np.max(p), 100)
-    try:
-        contour1 = sp1.contourf(X, Y, p, levels=levels, cmap='jet')
-    except:
-        contour1 = sp1.contourf(X, Y, p, levels=100, cmap='jet')
-    cbar1 = fig1.colorbar(contour1)
-    plt.show()
-    #plt.savefig(f'/home/jacob.schaefer/SogGitlab/pressurefigs/pressure_plot{iter}')
-
-def plot_stream(X:np.ndarray, Y:np.ndarray, u:np.ndarray, v:np.ndarray, p:np.ndarray, Lx, Ly, iter):
-    fig1= plt.figure(1, figsize=(2*Lx, 2*Ly))
-    sp1 = fig1.add_subplot(111)
-    sp1.set_aspect('equal')
-    sp1.set_xlim(0, Lx+0.1)
-    sp1.set_ylim(0, Ly+0.1)
-    levels = np.linspace(np.min(u), np.max(u), 100)
-    contour1 = sp1.contourf(X, Y, u, levels=levels, cmap='jet')
-    cbar1 = fig1.colorbar(contour1)
-    plt.show()
-
 def plot_field(X:np.ndarray, Y:np.ndarray, phi:np.ndarray, Lx, Ly, save=False, path=None, show=True):
     fig1= plt.figure(1, figsize=(2*Lx, 2*Ly))
     sp1 = fig1.add_subplot(111)
@@ -79,7 +54,6 @@ def plot_field(X:np.ndarray, Y:np.ndarray, phi:np.ndarray, Lx, Ly, save=False, p
     levels = np.linspace(np.min(phi), np.max(phi), 100)
     contour1 = sp1.contourf(X, Y, phi, levels=levels, cmap='jet')
     cbar1 = fig1.colorbar(contour1)
-
     if save:
         plt.savefig(path)
     if show:

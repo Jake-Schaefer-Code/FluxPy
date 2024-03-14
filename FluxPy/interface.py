@@ -19,6 +19,7 @@ class MeshInterface(ABC):
     ncells:int
     dx:float
     dy:float
+    priority_map:dict
     @abstractmethod
     def __getitem__(self, prim:str) -> FieldInterface:
         pass

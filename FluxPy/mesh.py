@@ -58,9 +58,6 @@ class Field(FieldInterface):
                 bc2 = self.BCS[edge2]
                 self._resolve_overlap(bc1, bc2)
 
-        
-
-
     def _resolve_overlap(self, BC1:BoundaryCondition, BC2:BoundaryCondition):
         """
         Parametes
@@ -74,9 +71,9 @@ class Field(FieldInterface):
         intersection = Slices.get_slice_intersect(BC1.indices, BC2.indices, self.mesh.ncells)
         if intersection[0] is None or intersection[1] is None:
             return
-        elif _priority_map[str(BC1)] > _priority_map[str(BC2)]:
+        elif self.mesh.priority_map[str(BC1)] > self.mesh.priority_map[str(BC2)]:
             BC1.indices = Slices.adjust_indices(BC1.indices, intersection, self.mesh.ncells, (BC1.boundary, BC2.boundary))
-        elif _priority_map[str(BC1)] < _priority_map[str(BC2)]:
+        elif self.mesh.priority_map[str(BC1)] < self.mesh.priority_map[str(BC2)]:
             BC2.indices = Slices.adjust_indices(BC2.indices, intersection, self.mesh.ncells, (BC2.boundary, BC1.boundary))
         # TODO figure this one out
         else:
@@ -165,7 +162,7 @@ class Mesh(MeshInterface):
     """
     Overarching Mesh Class
     """
-    def __init__(self, size:tuple, ncells:tuple, BCS:dict={}, nghosts:int=1, constants:dict={}) -> None:
+    def __init__(self, size:tuple, ncells:tuple, BCS:dict={}, priority_map:dict=_priority_map, nghosts:int=1, constants:dict={}) -> None:
         """
         Parameters
         --------------------------------
@@ -189,6 +186,7 @@ class Mesh(MeshInterface):
         # Accounts for the boundary layer that is not technically a ghost cell
         self.nghosts=nghosts+1
         self.BCS:dict[str, dict[str, dict[str, BoundaryCondition]]] 
+        self.priority_map = priority_map
         self._initialize_constants(constants)
         self._initialize_boundaries(BCS)
         

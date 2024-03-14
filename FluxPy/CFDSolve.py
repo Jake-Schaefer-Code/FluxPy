@@ -7,7 +7,7 @@ class LES:
     """
     
     """
-    def __init__(self, size:tuple, ncells:tuple, BCS:dict, constants:dict, nghosts:int=1):
+    def __init__(self, size:tuple, ncells:tuple, BCS:dict, priority_map:dict, constants:dict, nghosts:int=1):
 
         """
         Initializes the CFDSolve class and creates an instance of the Mesh class using the input parameters
@@ -26,18 +26,8 @@ class LES:
 
         Also prints fun logo heheh
         """
-        self.mesh = Mesh(size, ncells, BCS, nghosts, constants)
-        print()
-
-    def _initialize_constants(self, **kwargs) -> None:
-        """
-        initializes kwargs constants
-        """
-        for key, value in kwargs.items():
-            setattr(self, key, value)
-
-    def run(self):
-        pass
+        self.mesh = Mesh(size, ncells, BCS, priority_map, nghosts, constants)
+        print(LOGO)
 
     def _strain_rate_tensor2D(self) -> np.ndarray:
         """
@@ -59,7 +49,6 @@ class LES:
         """
 
         u, v = self.mesh['u'][:,:], self.mesh['v'][:,:]
-
         du_dx = first_order_partial(u, self.mesh.dx, axis=1)
         du_dy = first_order_partial(u, self.mesh.dx, axis=0)
         dv_dy = first_order_partial(v, self.mesh.dx, axis=0)
@@ -118,12 +107,6 @@ class LES:
         sgs_stress = -2 * nu_sgs * ros_tensor
         return sgs_stress
         
-    def calculate_smagorinsky_coefficient(self):
-        """
-        Calculates the Smagorinsky Coefficient C_s = 
-        """
-        return
-
     def quick_scheme(self, phi:str) -> tuple[np.ndarray]:
         """
         QUICK scheme -> Calculates the value of phi at the cell faces
@@ -163,7 +146,6 @@ class LES:
         phi_n = np.where(v == 0, phi_field, phi_n)
         phi_s = np.where(v == 0, phi_field, phi_s)"""
         phi_e, phi_w, phi_n, phi_s = field.apply_boundary_faces(phi_e, phi_w, phi_n, phi_s)
-
         return (phi_e, phi_w, phi_n, phi_s) 
 
     def _convective_flux(self, phi:str) -> tuple[np.ndarray]:
@@ -254,7 +236,6 @@ class LES:
         `b = ∇·(uu)`
         """
 
-        # TODO boundaries
         u, v = self.mesh['u'][:,:], self.mesh['v'][:,:]
         b = divergence(u, v, self.mesh.dx, self.mesh.dy)
         return b[2:-2, 2:-2]
@@ -292,11 +273,7 @@ class LES:
         # uses the conjugare gradient method
         p = self.mesh['p'][:,:]
         p_corrected = np.zeros_like(p)
-        """p_corrected = EquilibriumSolver.conjugate_gradient(A, b, p[2:-2, 2:-2], tolerance=tolerance, maxiter=5000)
-        print(p_corrected)
-        p_corrected = EquilibriumSolver.jacobi(A, b, p[2:-2, 2:-2], tolerance=tolerance, maxiter=5000)
-        print(p_corrected)"""
-        p_corrected = solver(A, b, p[2:-2, 2:-2], tolerance=tolerance, maxiter=5000)
+        p_corrected = solver(A, b, p[2:-2, 2:-2], tolerance=tolerance, maxiter=2000)
         return p_corrected
     
     def updateVelocityField(self, u_star:np.ndarray, v_star:np.ndarray, p:np.ndarray, dt:float) -> tuple[np.ndarray]:
