@@ -14,7 +14,9 @@ LOGO = "\n\
 
 def plot_sim(X:np.ndarray, Y:np.ndarray, u:np.ndarray, v:np.ndarray, p:np.ndarray, Lx, Ly, dx, dy, iter, 
              stream:bool=True, quiv:bool=False, grid_lines=False, titles:bool=False, savefig:bool=False):
+    """
     
+    """
     v_mag = np.sqrt(u**2 + v**2)
     omega = curl(u,v,dx,dy)
     fig1= plt.figure(1, figsize=(Lx, Ly))
@@ -46,6 +48,9 @@ def plot_sim(X:np.ndarray, Y:np.ndarray, u:np.ndarray, v:np.ndarray, p:np.ndarra
 
 
 def plot_field(X:np.ndarray, Y:np.ndarray, phi:np.ndarray, Lx, Ly, save=False, path=None, show=True):
+    """
+    
+    """
     fig1= plt.figure(1, figsize=(2*Lx, 2*Ly))
     sp1 = fig1.add_subplot(111)
     sp1.set_aspect('equal')

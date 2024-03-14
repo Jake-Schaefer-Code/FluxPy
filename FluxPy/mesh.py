@@ -66,9 +66,9 @@ class Field(FieldInterface):
         Parameters
         --------------------------------
         `BC1` : BoundaryCondition
-
+            Boundary condition 1
         `BC2` : BoundaryCondition
-
+            Boundary condition 2
         """
         intersection = Slices.get_slice_intersect(BC1.indices, BC2.indices, self.mesh.ncells)
         if intersection[0] is None or intersection[1] is None:
