@@ -1,4 +1,3 @@
-from enum import Enum
 import numpy as np
 from interface import *
 from utils import *
@@ -11,16 +10,23 @@ class BoundaryCondition(BoundaryInterface):
     """
     def __init__(self, boundary, value, flow_type, nghosts:int=1):
         self.boundary = boundary
+        if self.boundary in ['left', 'right']:
+            self.axis = 1
+        elif self.boundary in ['top', 'bottom']:
+            self.axis = 0
+        else:
+            self.axis = None
+
+        # TODO compute tangents
+        # self.tangent_dir = 0
+        
         self.value = value
         self.flow_type = flow_type
-        # Boundary layer
-        """if flow_type == 'constant':
-            nghosts += 1"""
         self.nghosts = nghosts
         self.indices = self._get_indices(nghosts)
         self.edge_layer = 0
         
-
+        
     def _get_indices(self, nghosts:int=1):
         """
         Parameters:
@@ -35,14 +41,21 @@ class BoundaryCondition(BoundaryInterface):
         Indices of the boundary
         """
         boundary = self.boundary
-        if boundary == 'left':
+        """if boundary == 'left':
             indices = (slice(0, None), slice(0, nghosts))
         elif boundary == 'right':
             indices = (slice(0, None), slice(-nghosts, None))
         elif boundary == 'top':
-            indices = (slice(-nghosts, None), slice(None))
+            indices = (slice(-nghosts, None), slice(0, None))
         elif boundary == 'bottom':
-            indices = (slice(None, nghosts), slice(None))
+            indices = (slice(0, nghosts), slice(0, None))"""
+        indices = [slice(0, None), slice(0, None)]
+        if boundary in ['left', 'bottom']:
+            indices[self.axis] = slice(0, nghosts)
+            indices = tuple(indices)
+        elif boundary in ['right', 'top']:
+            indices[self.axis] = slice(-nghosts, None)
+            indices = tuple(indices)
         elif self.__class__ is not Neumann and (isinstance(boundary, int) or isinstance(boundary, np.ndarray) or isinstance(boundary, tuple)):
             indices = boundary
         else:
@@ -51,23 +64,26 @@ class BoundaryCondition(BoundaryInterface):
 
     def _get_gradient(self, field, dx):
         if self.boundary == 'left':
-            return (field[:, self.nghosts] - field[:, self.nghosts-1]) / dx
+            grad = ((field[:, self.nghosts] - field[:, self.nghosts-1]) / dx)[self.indices[0]]
         elif self.boundary == 'right':
-            return (field[:, -(self.nghosts+1)] - field[:, -(self.nghosts)]) / dx
+            grad = ((field[:, -(self.nghosts+1)] - field[:, -(self.nghosts)]) / dx)[self.indices[0]]
         elif self.boundary == 'top':
-            return (field[-(self.nghosts+1), :] - field[-(self.nghosts), :]) / dx
+            grad = ((field[-(self.nghosts+1), :] - field[-(self.nghosts), :]) / dx)[self.indices[1]]
         elif self.boundary == 'bottom':
-            return (field[self.nghosts, :] - field[self.nghosts-1, :]) / dx
+            grad = ((field[self.nghosts, :] - field[self.nghosts-1, :]) / dx)[self.indices[1]]
+        else:
+            raise NotImplementedError(f"{self.boundary} is not a known boundary for type {self.__class__}")
         # TODO
-        return None
+        return grad
     
     def _apply_constant_grad(self, field, dx):
         nghosts = self.nghosts
-        grad_value = self._get_gradient(field, dx) if self.flow_type == 'constant' else 0
+        # grad_value = self._get_gradient(field, dx) if self.flow_type == 'constant' else 0
+        grad_value = self._get_gradient(field, dx)
         if self.boundary == 'left':
             for i in range(nghosts): 
-                field[self.indices[0], i] -= grad_value * dx * (nghosts - i - 1)
-
+                field[self.indices[0], i] -= grad_value * dx * (nghosts - 1 - i)
+    
         elif self.boundary == 'right':
             for i in range(1, nghosts+1):
                 field[self.indices[0], -i] -= grad_value * dx * (nghosts - i)
@@ -78,7 +94,8 @@ class BoundaryCondition(BoundaryInterface):
 
         elif self.boundary == 'bottom':
             for i in range(nghosts): 
-                field[i, self.indices[1]] -= grad_value * dx * (nghosts - i - 1)
+                field[i, self.indices[1]] -= grad_value * dx * (nghosts - 1 - i)
+
         return field
 
     def _get_edge_layer_indices(self):
@@ -118,9 +135,6 @@ class BoundaryCondition(BoundaryInterface):
         elif self.boundary in ['left', 'right']:
             field[self.indices] = value[self.indices[0], np.newaxis] if isinstance(value, np.ndarray) else value
         return field
-    
-    def __str__(self):
-        pass
     
 
 class Dirichlet(BoundaryCondition):
@@ -224,11 +238,8 @@ class Inflow(BoundaryCondition):
         --------------------------------
         `field` : FieldInterface
         
-        `boundary` : str
-        
         `value` : float = 0.0
         
-        `nghosts` : int = 1 
 
         Returns
         --------------------------------
@@ -242,14 +253,20 @@ class Outflow(Neumann):
     """
     Outflow boundary condition
     """
-    def __init__(self, boundary, value, flow_type:str='zerograd', nghosts:int=1):
+    def __init__(self, boundary, value:float|np.ndarray, flow_type:str='zerograd', nghosts:int=1):
         """
         Creates an instance of the Outflow class with a designated flow gradient type
 
         Parameters
         --------------------------------
-        `flowtype` : str
+        `boundary` : 
+
+        `value` : float | np.ndarray
+
+        `flow_type` : str
             Type of flow. Currently can be `zerograd` or `constant`
+        `nghosts` : int
+            Default is 1
         """
         if flow_type is None: flow_type = 'zerograd'
         super().__init__(boundary, value, flow_type, nghosts)
@@ -264,11 +281,8 @@ class Outflow(Neumann):
         --------------------------------
         `field` : FieldInterface
         
-        `boundary` : str
-        
-        `value` : float = 0.0
-        
-        `nghosts` : int = 1 
+        `value` : float | np.ndarray
+            Default is None
 
         Returns
         --------------------------------
@@ -279,13 +293,20 @@ class NoSlip(Neumann):
     """
     No-Slip boundary condition (equal to wall velocity)
     """
-    def __init__(self, boundary, value, flow_type:str='zerograd', nghosts:int=1):
+    def __init__(self, boundary, value:float|np.ndarray, flow_type:str='zerograd', nghosts:int=1):
         """
         Creates an instance of the NoSlip class with a designated flow gradient type
 
         Parameters
         --------------------------------
-        `flowtype` : str
+        `boundary` : 
+
+        `value` : float | np.ndarray
+
+        `flow_type` : str
+            Type of flow. Currently can be `zerograd` or `constant`
+        `nghosts` : int
+            Default is 1
         """
         if flow_type is None: flow_type = 'zerograd'
         super().__init__(boundary, value, flow_type, nghosts)
