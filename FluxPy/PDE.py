@@ -158,7 +158,7 @@ def curl(phi_x:np.ndarray, phi_y:np.ndarray, dx:float, dy:float) -> np.ndarray:
 
     ∇ x phi
     """
-    return first_order_partial(phi_y, dx, axis=0) - first_order_partial(phi_x, dy, axis=1)
+    return first_order_partial(phi_y, dx, axis=1) - first_order_partial(phi_x, dy, axis=0)
 
 # TODO Fix or remove
 def interpolate_velocity_to_faces(u_cell:np.ndarray, inlet_velocity:float) -> tuple[np.ndarray]:
