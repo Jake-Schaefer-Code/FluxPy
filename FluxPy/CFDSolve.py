@@ -1,7 +1,10 @@
 import numpy as np
-from PDE import *
+from .utils.PDE import *
 from mesh import *
-from plotting import *
+from .utils.plotting import *
+from.utils.utils import *
+
+__all__ = ["LES"]
 
 class LES:
     """
@@ -65,7 +68,11 @@ class LES:
         Returns the magnitude of the strain rate tensor
         """
         tensor2D = self._strain_rate_tensor2D()
+        bruh2 = np.sqrt(2 * (tensor2D[0, 0] ** 2 + tensor2D[1, 1] ** 2 + 2*tensor2D[1, 0]**2))
         s_mag = tensor2D ** 2
+        bruh = np.sqrt(2 * (s_mag[0, 0] + s_mag[1, 1] + s_mag[1, 0] + s_mag[0, 1]))
+        
+        np.testing.assert_almost_equal(bruh, bruh2)
         return np.sqrt(2 * (s_mag[0, 0] + s_mag[1, 1] + s_mag[1, 0] + s_mag[0, 1]))
     
     def smagorinsky_viscosity(self, Cs:float=0.15) -> np.ndarray:
@@ -240,7 +247,7 @@ class LES:
         b = divergence(u, v, self.mesh.dx, self.mesh.dy)
         return b[2:-2, 2:-2]
         
-    def solvePressureCorrectionEquation(self, dt, solver:EquilibriumSolver=EquilibriumSolver.gauss_seidel, tolerance:float=1e-6) -> np.ndarray:
+    def solvePressureCorrectionEquation(self, dt, solver:EquilibriumSolver=EquilibriumSolver.gauss_seidel, tolerance:float=1e-6, maxiter:int=5000) -> np.ndarray:
         """
         Solves the pressure-poisson equation using a Jacobi Iteration method
 
@@ -273,7 +280,7 @@ class LES:
         # uses the conjugare gradient method
         p = self.mesh['p'][:,:]
         p_corrected = np.zeros_like(p)
-        p_corrected = solver(A, b, p[2:-2, 2:-2], tolerance=tolerance, maxiter=2000)
+        p_corrected = solver(A, b, p[2:-2, 2:-2], tolerance=tolerance, maxiter=maxiter)
         return p_corrected
     
     def updateVelocityField(self, u_star:np.ndarray, v_star:np.ndarray, p:np.ndarray, dt:float) -> tuple[np.ndarray]:
@@ -299,3 +306,9 @@ class LES:
         u_updated = u_star - dt / self.mesh.rho * grad_p_x
         v_updated = v_star - dt / self.mesh.rho * grad_p_y
         return (u_updated, v_updated)
+    
+
+
+
+
+

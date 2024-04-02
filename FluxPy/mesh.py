@@ -1,5 +1,5 @@
 from boundaries import *
-from utils import make_sparse_A
+from FluxPy.FluxPy.utils.utils import make_sparse_A
 
 _required_edges = ['left', 'right', 'top', 'bottom']
 _default_boundary = {'condition': Dirichlet, 'value': 0.0}
@@ -18,7 +18,7 @@ _priority_map = {
     'Inflow':3
 }
 
-
+__all__ = ["Field", "Mesh"]
 
 class Field(FieldInterface):
     """
@@ -39,6 +39,7 @@ class Field(FieldInterface):
         self.prim = prim
         self.BCS:dict[str, BoundaryCondition] = BCS
         self.field = np.zeros(mesh.ncells)
+        print(self.field.shape)
         self.edges = _required_edges
         if 'custom' in self.BCS:
             self.custom_bcs = [self.BCS['custom']]
@@ -49,7 +50,6 @@ class Field(FieldInterface):
         self._setup_boundaries()
         for edge in _required_edges:
             self.BCS[edge]._get_edge_layer_indices()
-
 
     def _setup_boundaries(self):
         edges = list(self.BCS.keys())
@@ -107,7 +107,6 @@ class Field(FieldInterface):
             subset = self.field[:nghosts,:]
         return subset
     
-    
     def __setitem__(self, stencil:np.ndarray, value:float) -> None:
         """
         Parameters
@@ -137,7 +136,6 @@ class Field(FieldInterface):
         if self.custom_bcs:
             for bc, val in self.custom_bcs:
                 self.field[bc] = val
-
 
     def apply_boundary_faces(self, phi_e:np.ndarray, phi_w:np.ndarray, phi_n:np.ndarray, phi_s:np.ndarray):
         """
@@ -176,6 +174,7 @@ class Field(FieldInterface):
         return (phi_e, phi_w, phi_n, phi_s)
 
 
+# TODO figure out y,x vs x,y stuff
 class Mesh(MeshInterface):
     """
     Mesh Class
@@ -197,13 +196,17 @@ class Mesh(MeshInterface):
         `constants` : dict
             Constants dictionary. Defaults to {}
         """
-        self.size = size
-        self.ncells = ncells
         self.dx = size[0] / ncells[0]
         self.dy = size[1] / ncells[1]
-        self.ncells = (ncells[0]+2*nghosts, ncells[1]+2*nghosts)
-        self.X, self.Y = np.meshgrid(np.linspace(0, self.size[0], self.ncells[0]), 
-                                     np.linspace(0, self.size[1], self.ncells[1]))
+
+        # Converting to (y,x)
+        self.size = (size[1], size[0])
+
+
+        self.ncells = (ncells[1]+2*nghosts, ncells[0]+2*nghosts)
+        self.X, self.Y = np.meshgrid(np.linspace(0, self.size[1], self.ncells[1]), 
+                                     np.linspace(0, self.size[0], self.ncells[0]))
+        
         # Accounts for the boundary layer that is not technically a ghost cell
         self.nghosts=nghosts+1
         self.BCS:dict[str, dict[str, dict[str, BoundaryCondition]]] 
@@ -215,7 +218,9 @@ class Mesh(MeshInterface):
         self.v = Field(self, 'v', self.BCS['v'])
         self.p = Field(self, 'p', self.BCS['p'])
         self.apply_all_boundaries()
-        self.A = make_sparse_A(self.ncells[0]-4, self.ncells[1]-4, self.dx, self.dy)
+
+        # TODO
+        self.A = make_sparse_A(ncells[0], ncells[1], self.dx, self.dy)
 
 
     # TODO ----------------
