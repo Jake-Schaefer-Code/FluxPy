@@ -5,7 +5,6 @@ np.set_printoptions(precision=3, linewidth=150)
 
 
 
-    
 class BoundaryCondition(BoundaryInterface):
     """
     Parent class of all boundary condition subclasses
@@ -16,7 +15,7 @@ class BoundaryCondition(BoundaryInterface):
         
         # TODO compute tangents
         # self.tangent_dir = 0
-        self.dir = self._get_dir(boundary)
+        self.dir = self._get_face_normal(boundary)
 
         self.value = value
         self.flow_type = flow_type
@@ -25,6 +24,9 @@ class BoundaryCondition(BoundaryInterface):
         self.edge_layer = 0
     
     def _get_axis(self, boundary):
+        """
+        
+        """
         if boundary in ['left', 'right']:
             axis = 1
         elif boundary in ['top', 'bottom']:
@@ -33,15 +35,18 @@ class BoundaryCondition(BoundaryInterface):
             axis = None
         return axis
 
-    def _get_dir(self, boundary):
-        if boundary in ['left', 'bottom']:
+    def _get_face_normal(self, face:np.ndarray|str) -> float:
+        """
+        
+        """
+        if face in ['left', 'bottom']:
             dir = 1
-        elif boundary in ['right', 'top']:
+        elif face in ['right', 'top']:
             dir = -1
         else:
             dir = None
         return dir
-        
+            
     def _get_indices(self, nghosts:int=1):
         """
         Parameters:
